@@ -2,29 +2,49 @@
   <ion-page>
     <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title>Blank</ion-title>
+        <ion-title>NFC</ion-title>
       </ion-toolbar>
     </ion-header>
-    
+
     <ion-content :fullscreen="true">
       <ion-header collapse="condense">
         <ion-toolbar>
-          <ion-title size="large">Blank</ion-title>
+          <ion-title size="large">NFC</ion-title>
         </ion-toolbar>
       </ion-header>
-    
+
       <div id="container">
-        <strong>Ready to create an app?</strong>
-        <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+        <ion-list>
+          <ion-item v-for="msg of messages" :key="msg.timestamp">
+            <ion-label :style="{ color: decodeColor(msg.type) }">
+              {{ msg.text }}
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-input v-model="testInput"> </ion-input>
+            <ion-button @click="sendEvent">Send</ion-button>
+          </ion-item>
+        </ion-list>
       </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
-import { defineComponent } from 'vue';
-
+import {
+  IonContent,
+  IonHeader,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+  IonInput,
+  IonButton,
+  IonItem,
+  IonLabel,
+  IonList,
+} from '@ionic/vue'
+import { defineComponent, ref, Ref } from 'vue'
+import { NFC as nfc } from '@awesome-cordova-plugins/nfc'
 export default defineComponent({
   name: 'HomePage',
   components: {
@@ -32,37 +52,72 @@ export default defineComponent({
     IonHeader,
     IonPage,
     IonTitle,
-    IonToolbar
-  }
-});
+    IonToolbar,
+    IonInput,
+    IonButton,
+    IonItem,
+    IonLabel,
+    IonList,
+  },
+  setup() {
+    interface Message {
+      type: string
+      text: string
+      timestamp: string
+    }
+    // const url = 'http://localhost:8000'
+    // const url = 'http://192.168.1.24:8000'
+    const url = 'https://stark-chamber.deno.dev'
+    let testInput = ref('')
+    let messages: Ref<Message[]> = ref([])
+
+    let flags = nfc.FLAG_READER_NFC_A | nfc.FLAG_READER_NFC_V
+    nfc.readerMode(flags).subscribe(
+      async (tag) => {
+        messages.value.push({
+          type: 'info',
+          text: JSON.stringify(tag),
+          timestamp: new Date().toISOString(),
+        }),
+          await fetchPost(url + '/trigger', { value: tag })
+      },
+      (err) =>
+        messages.value.push({
+          type: 'error',
+          text: err,
+          timestamp: new Date().toISOString(),
+        })
+    )
+
+    async function fetchPost(backendUrl: string, data: any): Promise<any> {
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+    }
+
+    function decodeColor(type: string) {
+      if (type === 'info') return 'var(--ion-color-secondary)'
+      if (type === 'error') return 'var(--ion-color-danger)'
+      return 'var(--ion-color-warning)'
+    }
+
+    async function sendEvent() {
+      await fetchPost(url + '/trigger', {
+        value: testInput.value,
+      })
+      messages.value.push({
+        type: 'test',
+        text: testInput.value,
+        timestamp: new Date().toISOString(),
+      })
+      testInput.value = ''
+    }
+    return { testInput, messages, decodeColor, sendEvent }
+  },
+})
 </script>
-
-<style scoped>
-#container {
-  text-align: center;
-  
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
-}
-
-#container p {
-  font-size: 16px;
-  line-height: 22px;
-  
-  color: #8c8c8c;
-  
-  margin: 0;
-}
-
-#container a {
-  text-decoration: none;
-}
-</style>
