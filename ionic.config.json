@@ -1,0 +1,7 @@
+{
+  "name": "sse8ball-frontend",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue"
+}
