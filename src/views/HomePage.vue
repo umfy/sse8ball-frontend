@@ -74,12 +74,19 @@ export default defineComponent({
     let flags = nfc.FLAG_READER_NFC_A | nfc.FLAG_READER_NFC_V
     nfc.readerMode(flags).subscribe(
       async (tag) => {
+        let message: null | string[] = ['']
+        if (tag.ndefMessage) {
+          const binaryPayload = tag.ndefMessage[0]['payload']
+          const payload = nfc.bytesToString(binaryPayload)
+          message = payload.match(/.en(.*)/)
+          if (message === null) message = ['blank nfc','blank nfc']
+        }
         messages.value.push({
           type: 'info',
-          text: JSON.stringify(tag),
+          text: JSON.stringify(message[1]),
           timestamp: new Date().toISOString(),
         }),
-          await fetchPost(url + '/trigger', { value: tag })
+          await fetchPost(url + '/trigger', { value: message[1] })
       },
       (err) =>
         messages.value.push({
@@ -117,6 +124,7 @@ export default defineComponent({
       })
       testInput.value = ''
     }
+
     return { testInput, messages, decodeColor, sendEvent }
   },
 })
