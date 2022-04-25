@@ -67,7 +67,7 @@ export default defineComponent({
     }
     // const url = 'http://localhost:8000'
     // const url = 'http://192.168.1.24:8000'
-    const url = 'https://stark-chamber.deno.dev'
+    let url = 'https://stark-chamber.deno.dev'
     let testInput = ref('')
     let messages: Ref<Message[]> = ref([])
 
@@ -79,6 +79,7 @@ export default defineComponent({
           const binaryPayload = tag.ndefMessage[0]['payload']
           const payload = nfc.bytesToString(binaryPayload)
           message = payload.match(/.en(.*)/)
+          // that should never happen
           if (message === null) message = ['blank nfc','blank nfc']
         }
         messages.value.push({
@@ -114,6 +115,16 @@ export default defineComponent({
     }
 
     async function sendEvent() {
+      const regex = testInput.value.match(/#set (.*)/)
+      if (regex !== null) {
+        url = regex[1]
+        messages.value.push({
+        type: 'test',
+        text: `URL set to ${url}`,
+        timestamp: new Date().toISOString(),
+      })
+        return
+      }
       await fetchPost(url + '/trigger', {
         value: testInput.value,
       })
